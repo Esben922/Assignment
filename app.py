@@ -6,3 +6,6 @@ import matplotlib.pyplot as plt
 from scipy.stats import zscore
 import streamlit as st
 
+!kaggle datasets download -d kiva/data-science-for-good-kiva-crowdfunding --unzip
+
+
