@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import zscore
 import streamlit as st
 
-!kaggle datasets download -d kiva/data-science-for-good-kiva-crowdfunding --unzip
+df = pd.read_csv('loan_themes_by_region.csv')
 
+
+st.title('Assignment app')
 
