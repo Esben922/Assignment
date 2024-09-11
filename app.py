@@ -6,8 +6,5 @@ import matplotlib.pyplot as plt
 from scipy.stats import zscore
 import streamlit as st
 
-df = pd.read_csv('loan_themes_by_region.csv')
-
-
 st.title('Assignment app')
 
