@@ -33,15 +33,11 @@ if not selected_themes:
 filtered_df = filtered_df[filtered_df['Loan Theme Type'].isin(selected_themes)]
 
 
-st.title('Assignment Dashboard')
+st.title('Loan Theme Field Partners by Country')
 
 st.markdown('Country: '+selected_country)
 
-st.caption('MEAN:'+ str(filtered_df['amount'].mean()))
-st.caption('MEAN:'+ str(filtered_df['amount'].median()))
-st.caption('MODE:'+ str(filtered_df['amount'].mode()))
-st.dataframe(filtered_df)
-
+st.header('Field Partner Amounts')
 chart = alt.Chart(filtered_df).mark_bar().encode(
     y='sum(amount)',
     x=alt.X('Field Partner Name', sort='-y', axis=alt.Axis(labelAngle=-45, labelOverlap=False, labelFontSize=10))
@@ -50,12 +46,12 @@ chart = alt.Chart(filtered_df).mark_bar().encode(
 )
 st.altair_chart(chart, use_container_width=True)
 
+
+st.header('Field Partner Loan Theme Type Distribution')
 field_partner_options = filtered_df['Field Partner Name'].unique()  
 selected_partner = st.selectbox('Select a Field Partner', field_partner_options)  
-
 pie_chart_data = filtered_df[filtered_df['Field Partner Name'] == selected_partner].groupby('Loan Theme Type')['amount'].sum().reset_index()
 pie_chart_data.columns = ['Loan Theme Type', 'amount']
-
 chart = alt.Chart(pie_chart_data).mark_arc().encode(
     theta=alt.Theta(field='amount', type='quantitative'),  
     color=alt.Color(field='Loan Theme Type', type='nominal')  
@@ -64,5 +60,10 @@ chart = alt.Chart(pie_chart_data).mark_arc().encode(
     width=300,
     height=300
 )
-
 st.altair_chart(chart, use_container_width=True)
+
+st.header('Data Exploration')
+st.caption('MEAN:'+ str(filtered_df['amount'].mean()))
+st.caption('MEDIAN:'+ str(filtered_df['amount'].median()))
+st.caption('MODE:'+ str(filtered_df['amount'].mode()))
+st.dataframe(filtered_df)
