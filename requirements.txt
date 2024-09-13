@@ -3,3 +3,5 @@ numpy
 seaborn
 matplotlib
 scipy
+streamlit
+altair
