@@ -27,14 +27,15 @@ filtered_df = df[df['country'] == selected_country]
 filtered_df = filtered_df.merge(df2[['id', 'Loan Theme ID', 'Loan Theme Type', 'Partner ID']], how='left', left_on='id', right_on='id')
 df1_unique_partners = df1[['Partner ID', 'Field Partner Name']].drop_duplicates(subset=['Partner ID'])
 filtered_df = filtered_df.merge(df1_unique_partners, how='left', left_on='Partner ID', right_on='Partner ID')
-
+unique_partner_ids = df1['Partner ID'].unique()
+filtered_df = filtered_df[filtered_df['Partner ID'].isin(unique_partner_ids)]
 
 
 #Siderbar filter: Region
 loan_theme_types = filtered_df['Loan Theme Type'].unique().tolist()
 selected_themes = st.sidebar.multiselect("Select Loan Theme Types 🏢", loan_theme_types, default=loan_theme_types)
 if not selected_themes:
-    st.warning("Please select a region from the sidebar ⚠️")
+    st.warning("Please select a Country from the sidebar ⚠️")
     st.stop()
 filtered_df = filtered_df[filtered_df['Loan Theme Type'].isin(selected_themes)]
 
