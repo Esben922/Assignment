@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import zscore
 import streamlit as st
 import altair as alt
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 df = pd.read_csv('kiva_loans.csv')
 df1 = pd.read_csv('loan_themes_by_region.csv')
@@ -21,7 +23,7 @@ df = df[~df['outlier_amount']]
 # Sidebar filter: Country Group
 selected_country = st.sidebar.selectbox("Select Country", df['country'].unique().tolist())
 if not selected_country:
-    st.warning("Please select a Country from the sidebar ⚠️")
+    st.warning("Please select a new Country from the sidebar ⚠️ Data either missing or hidden⚠️")
     st.stop()
 filtered_df = df[df['country'] == selected_country]
 filtered_df = filtered_df.merge(df2[['id', 'Loan Theme ID', 'Loan Theme Type', 'Partner ID']], how='left', left_on='id', right_on='id')
@@ -35,7 +37,7 @@ filtered_df = filtered_df[filtered_df['Partner ID'].isin(unique_partner_ids)]
 loan_theme_types = filtered_df['Loan Theme Type'].unique().tolist()
 selected_themes = st.sidebar.multiselect("Select Loan Theme Types 🏢", loan_theme_types, default=loan_theme_types)
 if not selected_themes:
-    st.warning("Please select a Country from the sidebar ⚠️")
+    st.warning("Please select a new Country from the sidebar ⚠️ Data either missing or hidden⚠️")
     st.stop()
 filtered_df = filtered_df[filtered_df['Loan Theme Type'].isin(selected_themes)]
 
@@ -74,3 +76,77 @@ st.caption('MEAN:'+ str(filtered_df['loan_amount'].mean()))
 st.caption('MEDIAN:'+ str(filtered_df['loan_amount'].median()))
 st.caption('MODE:'+ str(filtered_df['loan_amount'].mode()))
 st.dataframe(filtered_df)
+
+
+st.header('K-Means Clustering')
+
+#the columns we want to do kmean to
+filtered_df_reduced = filtered_df[['loan_amount', 'term_in_months']]
+
+#to determine scaler
+fig, ax = plt.subplots(figsize=(10, 5))
+filtered_df_reduced.hist(bins=100, ax=ax)
+st.pyplot(fig)
+
+#my chosen scaler
+scaler = MinMaxScaler()
+
+data_to_cluster_scaled = scaler.fit_transform(filtered_df_reduced)
+
+# Initializing an empty list to store the sum of squared distances for each 'k'
+Sum_of_squared_distances = []
+
+# Define a range for possible cluster values (1 to 9)
+K = range(1, 10)
+
+# For each possible 'k', fit a KMeans model and compute the sum of squared distances
+for k in K:
+    km = KMeans(n_clusters=k, n_init = "auto")               # Initialize the KMeans model with 'k' clusters
+    km.fit(data_to_cluster_scaled)          # Fit the model on the scaled data
+    Sum_of_squared_distances.append(km.inertia_)  # Append the model's inertia (sum of squared distances) to the list
+
+fig, ax = plt.subplots()
+ax.plot(K, Sum_of_squared_distances, 'bx-')
+ax.set_xlabel('Number of Clusters (k)')
+ax.set_ylabel('Sum of Squared Distances')
+ax.set_title('Elbow Method For Optimal k')
+ax.grid(True)
+
+st.pyplot(fig)
+
+
+max_iters=100
+k = 4
+
+def k_means_simple(data, k, max_iters=100):
+    # 1. Initialize the k cluster centroids
+    centroids = data[np.random.choice(data.shape[0], k, replace=False)]
+
+    for _ in range(max_iters):
+        # 2. Assign each data point to the closest centroid
+        distances = np.linalg.norm(data - centroids[:, np.newaxis], axis=2)
+        labels = np.argmin(distances, axis=0)
+
+        # 3. Recompute the centroids
+        new_centroids = np.array([data[labels == i].mean(axis=0) for i in range(k)])
+
+        # Check for convergence
+        if np.all(centroids == new_centroids):
+            break
+
+        centroids = new_centroids
+
+    return labels, centroids
+
+labels, final_centroids = k_means_simple(data_to_cluster_scaled, 5)
+
+fig, ax = plt.subplots()
+sns.scatterplot(x=data_to_cluster_scaled[:, 0], y=data_to_cluster_scaled[:, 1], alpha=0.6, color='blue', ax=ax)
+
+sns.scatterplot(x=final_centroids[:, 0], y=final_centroids[:, 1], color='red', s=100, ax=ax)
+
+ax.set_title('PCA Reduced Data and Initial Centroids')
+ax.set_xlabel('X')
+ax.set_ylabel('Y')
+
+st.pyplot(fig)
