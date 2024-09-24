@@ -8,7 +8,8 @@ from scipy.stats import zscore
 import streamlit as st
 import altair as alt
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.metrics.pairwise import cosine_similarity
 
 df = pd.read_csv('kiva_loans.csv')
 df1 = pd.read_csv('loan_themes_by_region.csv')
@@ -93,17 +94,14 @@ scaler = MinMaxScaler()
 
 data_to_cluster_scaled = scaler.fit_transform(filtered_df_reduced)
 
-# Initializing an empty list to store the sum of squared distances for each 'k'
 Sum_of_squared_distances = []
 
-# Define a range for possible cluster values (1 to 9)
 K = range(1, 10)
 
-# For each possible 'k', fit a KMeans model and compute the sum of squared distances
 for k in K:
-    km = KMeans(n_clusters=k, n_init = "auto")               # Initialize the KMeans model with 'k' clusters
-    km.fit(data_to_cluster_scaled)          # Fit the model on the scaled data
-    Sum_of_squared_distances.append(km.inertia_)  # Append the model's inertia (sum of squared distances) to the list
+    km = KMeans(n_clusters=k, n_init = "auto")
+    km.fit(data_to_cluster_scaled)
+    Sum_of_squared_distances.append(km.inertia_)
 
 fig, ax = plt.subplots()
 ax.plot(K, Sum_of_squared_distances, 'bx-')
@@ -117,18 +115,14 @@ st.pyplot(fig)
 
 
 def k_means_simple(data, k, max_iters=100):
-    # 1. Initialize the k cluster centroids
     centroids = data[np.random.choice(data.shape[0], k, replace=False)]
 
     for _ in range(max_iters):
-        # 2. Assign each data point to the closest centroid
         distances = np.linalg.norm(data - centroids[:, np.newaxis], axis=2)
         labels = np.argmin(distances, axis=0)
 
-        # 3. Recompute the centroids
         new_centroids = np.array([data[labels == i].mean(axis=0) for i in range(k)])
 
-        # Check for convergence
         if np.all(centroids == new_centroids):
             break
 
@@ -137,6 +131,7 @@ def k_means_simple(data, k, max_iters=100):
     return labels, centroids
 
 labels, final_centroids = k_means_simple(data_to_cluster_scaled, 5)
+
 
 distances = np.linalg.norm(data_to_cluster_scaled[:, np.newaxis] - final_centroids, axis=2)
 nearest_centroid_indices = np.argmin(distances, axis=1)
@@ -163,6 +158,7 @@ data_df['term_in_months'] = filtered_df['term_in_months'].values
 data_df['activity'] = filtered_df['activity'].values
 data_df['sector'] = filtered_df['sector'].values
 data_df['region'] = filtered_df['region'].values
+data_df['Loan Theme Type'] = filtered_df['Loan Theme Type'].values
 
 combined_df = pd.concat([data_df, centroids_df])
 
@@ -180,10 +176,45 @@ scatter_plot = alt.Chart(combined_df).mark_circle(size=60).encode(
         alt.Tooltip('term_in_months:Q', title='Term (Months)'),
         alt.Tooltip('activity:N', title='Activity'),
         alt.Tooltip('sector:N', title='Sector'),
-        alt.Tooltip('region:N', title='Region')
+        alt.Tooltip('region:N', title='Region'),
+        alt.Tooltip('Loan Theme Type:N', title='Loan Theme Type')
     ]
 ).properties(
     title='Reduced Data and Initial Centroids'
 )
 
 st.altair_chart(scatter_plot, use_container_width=True)
+
+if 'region_selected' not in st.session_state:
+    st.session_state['region_selected'] = None
+if 'sector_selected' not in st.session_state:
+    st.session_state['sector_selected'] = None
+
+region_input = st.selectbox("Select Region", ["None"] + list(filtered_df['region'].unique()))
+
+if region_input != "None":
+    filtered_sectors = filtered_df[filtered_df['region'] == region_input]['sector'].unique()
+    sector_input = st.selectbox("Select Sector", ["None"] + list(filtered_sectors))
+else:
+    sector_input = st.selectbox("Select Sector", ["None"] + list(filtered_df['sector'].unique()))
+
+if region_input != "None" and sector_input != "None":
+    user_filtered_df = filtered_df[(filtered_df['sector'] == sector_input) & (filtered_df['region'] == region_input)]
+    
+    if not user_filtered_df.empty:
+        indices = user_filtered_df.index
+
+        filtered_scaled_data = data_to_cluster_scaled[indices]
+
+        similarity_matrix = cosine_similarity(filtered_scaled_data)
+
+        similar_loans_indices = np.argsort(similarity_matrix[0])[::-1][1:4]
+
+        recommendations = user_filtered_df.iloc[similar_loans_indices][['Loan Theme Type', 'loan_amount', 'term_in_months']]
+
+        st.write("Recommended Loans:")
+        st.dataframe(recommendations)
+    else:
+        st.write("No matching loans found for the selected region and sector.")
+else:
+    st.write("Please select both a region and a sector.")
