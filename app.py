@@ -138,49 +138,44 @@ def k_means_simple(data, k, max_iters=100):
 
 labels, final_centroids = k_means_simple(data_to_cluster_scaled, 5)
 
-# Calculate the nearest centroid for each data point
 distances = np.linalg.norm(data_to_cluster_scaled[:, np.newaxis] - final_centroids, axis=2)
 nearest_centroid_indices = np.argmin(distances, axis=1)
 
-# Convert the data into DataFrame, now including nearest centroid information
 data_df = pd.DataFrame({
     'x': data_to_cluster_scaled[:, 0],
     'y': data_to_cluster_scaled[:, 1],
-    'centroid': nearest_centroid_indices  # Assign each data point to its nearest centroid
+    'centroid': nearest_centroid_indices 
 })
 
-# Create centroids DataFrame
+
 centroids_df = pd.DataFrame({
     'x': final_centroids[:, 0],
     'y': final_centroids[:, 1],
-    'centroid': range(final_centroids.shape[0])  # Label each centroid with an index
+    'centroid': range(final_centroids.shape[0]) 
 })
 
-# Add a column to differentiate between data points and centroids
+
 data_df['type'] = 'data'
 centroids_df['type'] = 'centroid'
 
-#labels
 data_df['loan_amount'] = filtered_df['loan_amount'].values
 data_df['term_in_months'] = filtered_df['term_in_months'].values
 data_df['activity'] = filtered_df['activity'].values
 data_df['sector'] = filtered_df['sector'].values
 data_df['region'] = filtered_df['region'].values
 
-# Combine both data and centroids into one DataFrame
 combined_df = pd.concat([data_df, centroids_df])
 
-# Create the scatter plot with coloring based on nearest centroid
 scatter_plot = alt.Chart(combined_df).mark_circle(size=60).encode(
     x='x',
     y='y',
-    color=alt.Color('centroid:N', scale=alt.Scale(scheme='category10')),  # Color by centroid index
+    color=alt.Color('centroid:N', scale=alt.Scale(scheme='category10')), 
     opacity=alt.condition(
-        alt.datum.type == 'data',  # Opacity lower for data points
+        alt.datum.type == 'data',  
         alt.value(0.6),
-        alt.value(1)  # Centroids have full opacity
+        alt.value(1) 
     ),
-    tooltip=[  # Add tooltips with the desired columns
+    tooltip=[ 
         alt.Tooltip('loan_amount:Q', title='Loan Amount'),
         alt.Tooltip('term_in_months:Q', title='Term (Months)'),
         alt.Tooltip('activity:N', title='Activity'),
@@ -191,5 +186,4 @@ scatter_plot = alt.Chart(combined_df).mark_circle(size=60).encode(
     title='Reduced Data and Initial Centroids'
 )
 
-# Display the plot in Streamlit
 st.altair_chart(scatter_plot, use_container_width=True)
